@@ -1,18 +1,41 @@
-#include "../include/common.h"
+#ifndef REVERSUB_UTILS_H_
+#define REVERSUB_UTILS_H_
+
+#include "common.h"
 #include <stdio.h>
 
+// Default file paths
+#define kDefaultInputPath "data/input/cipher.txt"
+#define kDefaultOutputPath "data/output/plain.txt"
+#define kMaxLineLength 256
 
-char *read_file(const char* path);
+// Returns dynamically allocated buffer with file contents.
+// Caller must free the returned buffer.
+// Returns NULL on error.
+char* ReadFile(const char* filepath);
 
-// Computes the index for a given quadgram based on its position in the lexicographical order of all possible 4-letter combinations using the English alphabet (A-Z).
-// For example, "AAAA" maps to index 0, "AAAB" maps to index 1, ..., and "ZZZZ" maps to MAX_QUADGRAM_COUNT-1.
-int get_index(const char* quadgram);
+// Writes data to specified file.
+// Returns 0 on success, -1 on error.
+int WriteFile(const char* filepath, const char* data);
 
-QuadgramStats* parse_quadgram_stats(const char* data);
+// Computes index for a quadgram in lexicographical order.
+// Returns -1 if quadgram contains invalid characters.
+int GetQuadgramIndex(const char* quadgram);
 
-void write_file(const char *path, char *data);
+// Parses quadgram statistics from raw data.
+// Returns NULL on error.
+QuadgramStats* ParseQuadgramStats(const char* data);
 
-char* get_quadgram(int index);
+// Converts index back to quadgram string.
+// Returns NULL on error. Caller must free returned string.
+char* GetQuadgramFromIndex(int index);
 
-// Debug
-void print_stats(const QuadgramStats* stats);
+// Prints quadgram statistics.
+void PrintQuadgramStats(const QuadgramStats* stats);
+
+// Frees QuadgramStats structure.
+void FreeQuadgramStats(QuadgramStats* stats);
+
+
+
+#endif // REVERSUB_UTILS_H_

@@ -1,23 +1,43 @@
 #include "../include/utils.h"
+#include <stdlib.h>
 
-#define QUADGRAMS_FILE "data/quadgrams.txt"
-
+#define kQuadgramsFile "data/quadgrams.txt"
 
 int main(int argc, char* argv[]) {
-	printf("ReverSub\n");
-
-	if (argc < 3) {
-		printf("Using default files\n");
+	printf("ReverSub Cipher Solver\n");
+	
+	const char* input_file = (argc > 1) ? argv[1] : NULL;
+	const char* output_file = (argc > 2) ? argv[2] : NULL;
+	
+	char* quadgram_data = ReadFile(kQuadgramsFile);
+	if (quadgram_data == NULL) {
+		return EXIT_FAILURE;
 	}
 	
-    QuadgramStats* stats = parse_quadgram_stats(read_file(QUADGRAMS_FILE));
-	print_stats(stats);
-
-    char* ciphertext = read_file(argv[1]);
-	printf("%s\n", ciphertext);
-    //Solution* solution = solve_cipher(ciphertext, stats);
-    
-    write_file(argv[2], ciphertext);
+	QuadgramStats* stats = ParseQuadgramStats(quadgram_data);
+	free(quadgram_data);
 	
-	return 0;
+	if (stats == NULL) {
+		return EXIT_FAILURE;
+	}
+	
+	PrintQuadgramStats(stats);
+	
+	char* ciphertext = ReadFile(input_file);
+	if (ciphertext == NULL) {
+		FreeQuadgramStats(stats);
+		return EXIT_FAILURE;
+	}
+	
+	printf("Ciphertext:\n%s\n", ciphertext);
+	
+	if (WriteFile(output_file, ciphertext) != 0) {
+		free(ciphertext);
+		FreeQuadgramStats(stats);
+		return EXIT_FAILURE;
+	}
+	
+	free(ciphertext);
+	FreeQuadgramStats(stats);
+	return EXIT_SUCCESS;
 }

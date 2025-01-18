@@ -1,130 +1,183 @@
 #include "../include/utils.h"
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
-#define READ_MODE "r"
-#define WRITE_MODE "w"
-#define MAX_LINE_LENGTH 256
+#define kReadMode "r"
+#define kWriteMode "w"
 
-const char* DEFAULT_FILES[] = {
-    "data/input/cipher.txt",
-    "data/output/plain.txt"
-};
-
-char *read_file(const char* path) {
-	if (path == NULL) {
-        path = DEFAULT_FILES[0];  // Use default input file if no path is provided
-    }
+char* ReadFile(const char* filepath) {
+	if (filepath == NULL) {
+		filepath = kDefaultInputPath;
+	}
 	
-    // Open the file for reading
-	FILE *file = fopen(path, READ_MODE);
+	FILE* file = fopen(filepath, kReadMode);
+	if (file == NULL) {
+		fprintf(stderr, "Error opening file %s: %s\n", filepath, strerror(errno));
+		return NULL;
+	}
 	
-    // Move to the end of the file to determine the length
-	fseek(file, 0, SEEK_END);
+	if (fseek(file, 0, SEEK_END) != 0) {
+		fprintf(stderr, "Error seeking file: %s\n", strerror(errno));
+		fclose(file);
+		return NULL;
+	}
 	
-    // Get the location of the file pointer (the file length)
 	long length = ftell(file);
+	if (length == -1) {
+		fprintf(stderr, "Error getting file size: %s\n", strerror(errno));
+		fclose(file);
+		return NULL;
+	}
 	
-	// +1 For null-terminator
-	char *buffer = malloc(length + 1);
+	char* buffer = malloc(length + 1);
+	if (buffer == NULL) {
+		fprintf(stderr, "Memory allocation failed\n");
+		fclose(file);
+		return NULL;
+	}
 	
-	fseek(file, 0, SEEK_SET);
+	if (fseek(file, 0, SEEK_SET) != 0) {
+		fprintf(stderr, "Error seeking file: %s\n", strerror(errno));
+		free(buffer);
+		fclose(file);
+		return NULL;
+	}
 	
-	// Read the content of the file into the buffer
-    size_t bytes_read = fread(buffer, 1, length, file);
+	size_t bytes_read = fread(buffer, 1, length, file);
+	
 	buffer[bytes_read] = '\0';
-	
 	fclose(file);
 	return buffer;
 }
 
-
-int get_index(const char* quadgram) {
-    // Assuming the quadgram consists of uppercase English letters (A-Z)
-    // We map each letter to its 0-based index ('A' -> 0, 'B' -> 1, ..., 'Z' -> 25)
-    int index = 0;
-    for (int i = 0; i < QUADGRAM_LENGTH; i++) {
-        index = index * ALPHABET_LENGTH + (quadgram[i] - ALPHABET[0]);
-    }
-    return index;
+int GetQuadgramIndex(const char* quadgram) {
+	if (quadgram == NULL || strlen(quadgram) != kQuadgramSize) {
+		return -1;
+	}
+	
+	int index = 0;
+	for (int i = 0; i < kQuadgramSize; i++) {
+		if (quadgram[i] < 'A' || quadgram[i] > 'Z') {
+			return -1;
+		}
+		index = index * kAlphabetSize + (quadgram[i] - kAlphabet[0]);
+	}
+	return index;
 }
 
-QuadgramStats* parse_quadgram_stats(const char* data) {
-	// Initialize
-	QuadgramStats* stats = (QuadgramStats*)malloc(sizeof(QuadgramStats));
-	memset(stats->scores, 0, sizeof(stats->scores));
-	stats->count = 0;
+QuadgramStats* ParseQuadgramStats(const char* data) {
+	if (data == NULL) {
+		return NULL;
+	}
 	
-	// Go over data line-by-line
-	char line[MAX_LINE_LENGTH];
-    const char* ptr = data;
+	QuadgramStats* stats = malloc(sizeof(QuadgramStats));
+	if (stats == NULL) {
+		return NULL;
+	}
+	
+	stats->scores = calloc(kMaxQuadgramCount, sizeof(double));
+	if (stats->scores == NULL) {
+		free(stats);
+		return NULL;
+	}
+	
+	stats->count = 0;
+	char line[kMaxLineLength];
+	const char* ptr = data;
+	
 	while (sscanf(ptr, "%s", line) == 1) {
-		// Extract the quadgram (first 4 chars of the line)
-		char quadgram[5];
-		strncpy(quadgram, line, 4);
-		quadgram[4] = '\0';
-
+		char quadgram[kQuadgramSize + 1];
+		strncpy(quadgram, line, kQuadgramSize);
+		quadgram[kQuadgramSize] = '\0';
 		
 		int frequency;
-        ptr += strlen(line) + 1; // Move pointer past the quadgram
-        if (sscanf(ptr, "%d", &frequency) == 1) {
-            int index = get_index(quadgram);
-
-            // Store the frequency in the corresponding index in the scores array
-            stats->scores[index] = frequency;
-            stats->count += 1;
-        }
+		ptr += strlen(line) + 1;
 		
-		// Move to the next line
+		if (sscanf(ptr, "%d", &frequency) == 1) {
+			int index = GetQuadgramIndex(quadgram);
+			if (index >= 0) {
+				stats->scores[index] = frequency;
+				stats->count++;
+			}
+		}
+		
 		while (*ptr != '\n' && *ptr != '\0') {
-            ptr++;
-        }
-        if (*ptr == '\n') {
-            ptr++;
-        }
+			ptr++;
+		}
+		if (*ptr == '\n') {
+			ptr++;
+		}
 	}
 	
 	return stats;
 }
 
-void write_file(const char *path, char *data) {
-	if (path == NULL) {
-        path = DEFAULT_FILES[1];  // Use default input file if no path is provided
-    }
+int WriteFile(const char* filepath, const char* data) {
+	if (data == NULL) {
+		return -1;
+	}
 	
-	FILE *file = fopen(path, WRITE_MODE);
-	fprintf(file, "%s", data);
+	if (filepath == NULL) {
+		filepath = kDefaultOutputPath;
+	}
+	
+	FILE* file = fopen(filepath, kWriteMode);
+	if (file == NULL) {
+		fprintf(stderr, "Error opening file %s: %s\n", filepath, strerror(errno));
+		return -1;
+	}
+	
+	if (fprintf(file, "%s", data) < 0) {
+		fprintf(stderr, "Error writing to file: %s\n", strerror(errno));
+		fclose(file);
+		return -1;
+	}
+	
 	fclose(file);
+	return 0;
 }
 
-char* get_quadgram(int index) {
-    if (index < 0 || index >= MAX_QUADGRAM_COUNT) {
-        fprintf(stderr, "Error: Index out of bounds.\n");
-        return NULL;
-    }
-
-    char* quadgram = (char*)malloc(QUADGRAM_LENGTH + 1);
-    if (!quadgram) {
-        fprintf(stderr, "Error: Memory allocation failed.\n");
-        return NULL;
-    }
-
-    for (int i = QUADGRAM_LENGTH - 1; i >= 0; i--) {
-        quadgram[i] = ALPHABET[0] + (index % ALPHABET_LENGTH);
-        index /= ALPHABET_LENGTH;
-    }
-
-    quadgram[QUADGRAM_LENGTH] = '\0';
-
-    return quadgram;
-}
-
-void print_stats(const QuadgramStats* stats) {
-    printf("Quadgram Scores:\n");
-	printf("%d", stats->count);
+char* GetQuadgramFromIndex(int index) {
+	if (index < 0 || index >= kMaxQuadgramCount) {
+		return NULL;
+	}
 	
-	// We also go over all quadgrams
-    for (int i = 0; i < MAX_QUADGRAM_COUNT; i++) {
-        printf("Quadgram %s: %.6f\n", get_quadgram(i), stats->scores[i]);
-    }
+	char* quadgram = malloc(kQuadgramSize + 1);
+	if (quadgram == NULL) {
+		return NULL;
+	}
+	
+	for (int i = kQuadgramSize - 1; i >= 0; i--) {
+		quadgram[i] = kAlphabet[0] + (index % kAlphabetSize);
+		index /= kAlphabetSize;
+	}
+	quadgram[kQuadgramSize] = '\0';
+	
+	return quadgram;
+}
+
+void PrintQuadgramStats(const QuadgramStats* stats) {
+	if (stats == NULL) {
+		return;
+	}
+	
+	printf("Number of quadgrams: %d\n", stats->count);
+	
+	for (int i = 0; i < kMaxQuadgramCount; i++) {
+		if (stats->scores[i] > 0) {
+			char* quadgram = GetQuadgramFromIndex(i);
+			if (quadgram != NULL) {
+				printf("%s: %d\n", quadgram, stats->scores[i]);
+				free(quadgram);
+			}
+		}
+	}
+}
+
+void FreeQuadgramStats(QuadgramStats* stats) {
+	if (stats != NULL) {
+		free(stats->scores);
+		free(stats);
+	}
 }
