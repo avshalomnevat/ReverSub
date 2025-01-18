@@ -1,10 +1,12 @@
 # Build files
 *.o
 *.out
+*.exe
 
 # Binary directory
-bin/
+build/
 
 # Output files
 data/output/*
 !data/output/.gitkeep
+
