@@ -11,3 +11,8 @@ int get_index(const char* quadgram);
 QuadgramStats* parse_quadgram_stats(const char* data);
 
 void write_file(const char *path, char *data);
+
+char* get_quadgram(int index);
+
+// Debug
+void print_stats(const QuadgramStats* stats);

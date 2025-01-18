@@ -63,6 +63,7 @@ QuadgramStats* parse_quadgram_stats(const char* data) {
 		char quadgram[5];
 		strncpy(quadgram, line, 4);
 		quadgram[4] = '\0';
+
 		
 		int frequency;
         ptr += strlen(line) + 1; // Move pointer past the quadgram
@@ -71,7 +72,7 @@ QuadgramStats* parse_quadgram_stats(const char* data) {
 
             // Store the frequency in the corresponding index in the scores array
             stats->scores[index] = frequency;
-            stats->count += frequency;
+            stats->count += 1;
         }
 		
 		// Move to the next line
@@ -94,4 +95,36 @@ void write_file(const char *path, char *data) {
 	FILE *file = fopen(path, WRITE_MODE);
 	fprintf(file, "%s", data);
 	fclose(file);
+}
+
+char* get_quadgram(int index) {
+    if (index < 0 || index >= MAX_QUADGRAM_COUNT) {
+        fprintf(stderr, "Error: Index out of bounds.\n");
+        return NULL;
+    }
+
+    char* quadgram = (char*)malloc(QUADGRAM_LENGTH + 1);
+    if (!quadgram) {
+        fprintf(stderr, "Error: Memory allocation failed.\n");
+        return NULL;
+    }
+
+    for (int i = QUADGRAM_LENGTH - 1; i >= 0; i--) {
+        quadgram[i] = ALPHABET[0] + (index % ALPHABET_LENGTH);
+        index /= ALPHABET_LENGTH;
+    }
+
+    quadgram[QUADGRAM_LENGTH] = '\0';
+
+    return quadgram;
+}
+
+void print_stats(const QuadgramStats* stats) {
+    printf("Quadgram Scores:\n");
+	printf("%d", stats->count);
+	
+	// We also go over all quadgrams
+    for (int i = 0; i < MAX_QUADGRAM_COUNT; i++) {
+        printf("Quadgram %s: %.6f\n", get_quadgram(i), stats->scores[i]);
+    }
 }
