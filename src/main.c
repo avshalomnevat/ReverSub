@@ -1,4 +1,5 @@
 #include "../include/utils.h"
+#include "../include/solver.h"
 #include <stdlib.h>
 
 #define kQuadgramsFile "data/quadgrams.txt"
@@ -21,7 +22,7 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 	
-	PrintQuadgramStats(stats);
+	// PrintQuadgramStats(stats);
 	
 	char* ciphertext = ReadFile(input_file);
 	if (ciphertext == NULL) {
@@ -29,13 +30,23 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 	
-	printf("Ciphertext:\n%s\n", ciphertext);
+	// printf("Ciphertext:\n%s\n", ciphertext);
 	
 	if (WriteFile(output_file, ciphertext) != 0) {
 		free(ciphertext);
 		FreeQuadgramStats(stats);
 		return EXIT_FAILURE;
 	}
+	
+	Solver* solver = InitSolver(ciphertext, stats);
+    if (!solver) {
+		free(ciphertext);
+		FreeQuadgramStats(stats);
+		return EXIT_FAILURE;
+	}
+	
+    const char* random_key = GetKey(solver);
+    printf("Generated Random Key: %s\n", random_key);
 	
 	free(ciphertext);
 	FreeQuadgramStats(stats);

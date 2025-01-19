@@ -37,5 +37,4 @@ void PrintQuadgramStats(const QuadgramStats* stats);
 void FreeQuadgramStats(QuadgramStats* stats);
 
 
-
 #endif // REVERSUB_UTILS_H_
